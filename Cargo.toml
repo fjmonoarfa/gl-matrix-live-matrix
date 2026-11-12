@@ -1,0 +1,11 @@
+[package]
+name = "glmatrix-live"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+x11rb = { version = "0.13", features = ["composite", "randr", "screensaver", "shape"] }
+libc = "0.2"
+clap = { version = "4.4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
