@@ -38,12 +38,15 @@ impl GeneralConfig {
     }
 
     pub fn get_pam_service(&self) -> String {
-        if std::path::Path::new(&format!("/etc/pam.d/{}", self.pam_service)).exists() {
-            return self.pam_service.clone();
-        }
-        for svc in &["glmatrix-live", "xscreensaver", "login", "common-auth"] {
-            if std::path::Path::new(&format!("/etc/pam.d/{}", svc)).exists() {
-                return svc.to_string();
+        #[cfg(unix)]
+        {
+            if std::path::Path::new(&format!("/etc/pam.d/{}", self.pam_service)).exists() {
+                return self.pam_service.clone();
+            }
+            for svc in &["glmatrix-live", "xscreensaver", "login", "common-auth"] {
+                if std::path::Path::new(&format!("/etc/pam.d/{}", svc)).exists() {
+                    return svc.to_string();
+                }
             }
         }
         self.pam_service.clone()
@@ -86,6 +89,7 @@ impl Default for Config {
     fn default() -> Self {
         let default_glmatrix = "builtin".to_string();
 
+        #[cfg(unix)]
         let default_pam = if std::path::Path::new("/etc/pam.d/glmatrix-live").exists() {
             "glmatrix-live".to_string()
         } else if std::path::Path::new("/etc/pam.d/xscreensaver").exists() {
@@ -93,6 +97,8 @@ impl Default for Config {
         } else {
             "glmatrix-live".to_string()
         };
+        #[cfg(windows)]
+        let default_pam = "windows".to_string();
 
         Self {
             general: GeneralConfig {
@@ -151,7 +157,7 @@ impl MatrixOptions {
         }
     }
 
-    pub fn to_args(&self, window_id: u32) -> Vec<String> {
+    pub fn to_args(&self, window_id: u64) -> Vec<String> {
         let mut args = vec![
             "-window-id".to_string(),
             format!("0x{:x}", window_id),
@@ -209,6 +215,19 @@ impl MatrixOptions {
 
 impl Config {
     pub fn config_path() -> PathBuf {
+        #[cfg(windows)]
+        {
+            if let Ok(appdata) = std::env::var("APPDATA") {
+                return Path::new(&appdata).join("glmatrix-live").join("config.toml");
+            }
+            if let Ok(profile) = std::env::var("USERPROFILE") {
+                return Path::new(&profile)
+                    .join("AppData")
+                    .join("Roaming")
+                    .join("glmatrix-live")
+                    .join("config.toml");
+            }
+        }
         if let Ok(home) = std::env::var("HOME") {
             Path::new(&home).join(".config").join("glmatrix-live").join("config.toml")
         } else {
@@ -250,7 +269,7 @@ impl Config {
     pub fn spawn_glmatrix(
         &self,
         opts: &MatrixOptions,
-        window_id: u32,
+        window_id: u64,
     ) -> Result<std::process::Child, String> {
         let target = self.general.get_glmatrix_path();
         let args = opts.to_args(window_id);

@@ -150,7 +150,7 @@ pub fn run_lockscreen(cfg: &Config) -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // 4. Jalankan glmatrix di belakang lock screen (renderer bawaan atau eksternal)
-    let glmatrix_child: Option<Child> = cfg.spawn_glmatrix(&cfg.lockscreen.options, lock_win).ok();
+    let glmatrix_child: Option<Child> = cfg.spawn_glmatrix(&cfg.lockscreen.options, lock_win as u64).ok();
 
     // 5. Loop input password & verifikasi PAM
     let mut password = String::new();

@@ -94,7 +94,7 @@ pub fn start_desktop(cfg: &Config) -> Result<(RustConnection, DesktopWallpaper),
     conn.flush()?;
 
     // Spawn glmatrix (renderer bawaan atau eksternal)
-    let child = cfg.spawn_glmatrix(&cfg.desktop, win)?;
+    let child = cfg.spawn_glmatrix(&cfg.desktop, win as u64)?;
 
     Ok((conn, DesktopWallpaper { window: win, child }))
 }
