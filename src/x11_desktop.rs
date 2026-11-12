@@ -1,4 +1,4 @@
-use std::process::{Child, Command};
+use std::process::Child;
 use x11rb::connection::Connection;
 use x11rb::protocol::shape;
 use x11rb::protocol::xproto::*;
@@ -93,13 +93,8 @@ pub fn start_desktop(cfg: &Config) -> Result<(RustConnection, DesktopWallpaper),
     conn.map_window(win)?;
     conn.flush()?;
 
-    // Spawn glmatrix
-    let glmatrix_bin = cfg.general.get_glmatrix_path();
-    let args = cfg.desktop.to_args(win);
-    let child = Command::new(&glmatrix_bin)
-        .args(&args)
-        .spawn()
-        .map_err(|e| format!("Gagal menjalankan glmatrix di {}: {}", glmatrix_bin, e))?;
+    // Spawn glmatrix (renderer bawaan atau eksternal)
+    let child = cfg.spawn_glmatrix(&cfg.desktop, win)?;
 
     Ok((conn, DesktopWallpaper { window: win, child }))
 }

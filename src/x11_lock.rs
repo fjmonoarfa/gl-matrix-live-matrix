@@ -1,4 +1,4 @@
-use std::process::{Child, Command};
+use std::process::Child;
 use std::time::Duration;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::*;
@@ -149,13 +149,8 @@ pub fn run_lockscreen(cfg: &Config) -> Result<(), Box<dyn std::error::Error>> {
         x11rb::CURRENT_TIME,
     )?;
 
-    // 4. Jalankan glmatrix di belakang lock screen
-    let glmatrix_bin = cfg.general.get_glmatrix_path();
-    let args = cfg.lockscreen.options.to_args(lock_win);
-    let glmatrix_child: Option<Child> = Command::new(&glmatrix_bin)
-        .args(&args)
-        .spawn()
-        .ok();
+    // 4. Jalankan glmatrix di belakang lock screen (renderer bawaan atau eksternal)
+    let glmatrix_child: Option<Child> = cfg.spawn_glmatrix(&cfg.lockscreen.options, lock_win).ok();
 
     // 5. Loop input password & verifikasi PAM
     let mut password = String::new();

@@ -1,4 +1,5 @@
 mod config;
+mod gl_matrix;
 mod pam;
 mod x11_desktop;
 mod x11_lock;
@@ -50,6 +51,11 @@ enum Commands {
         /// Buka panel konfigurasi GUI
         #[arg(long)]
         gui: bool,
+    },
+    /// Jalankan renderer OpenGL Matrix bawaan (dipakai internal oleh daemon/preview)
+    Render {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
     },
 }
 
@@ -189,6 +195,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("  Path: {:?}", path);
                 println!("\nUntuk membuka panel konfigurasi GUI, jalankan: glmatrix-live panel");
             }
+        }
+        Commands::Render { args } => {
+            let parsed = gl_matrix::parse_render_args(&args);
+            gl_matrix::run_renderer(&parsed)?;
         }
     }
 

@@ -27,23 +27,14 @@ pub struct GeneralConfig {
 
 impl GeneralConfig {
     pub fn get_glmatrix_path(&self) -> String {
-        if std::path::Path::new(&self.glmatrix_path).exists() {
-            return self.glmatrix_path.clone();
+        let trimmed = self.glmatrix_path.trim();
+        if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("builtin") {
+            return "builtin".to_string();
         }
-        let bundled = "/opt/glmatrix-live/libexec/glmatrix";
-        if std::path::Path::new(bundled).exists() {
-            return bundled.to_string();
+        if std::path::Path::new(trimmed).exists() {
+            return trimmed.to_string();
         }
-        for path in &[
-            "/usr/libexec/xscreensaver/glmatrix",
-            "/usr/lib/xscreensaver/glmatrix",
-            "/usr/bin/glmatrix",
-        ] {
-            if std::path::Path::new(path).exists() {
-                return path.to_string();
-            }
-        }
-        self.glmatrix_path.clone()
+        "builtin".to_string()
     }
 
     pub fn get_pam_service(&self) -> String {
@@ -93,15 +84,7 @@ pub struct LockscreenConfig {
 
 impl Default for Config {
     fn default() -> Self {
-        let default_glmatrix = if std::path::Path::new("/opt/glmatrix-live/libexec/glmatrix").exists() {
-            "/opt/glmatrix-live/libexec/glmatrix".to_string()
-        } else if std::path::Path::new("/usr/libexec/xscreensaver/glmatrix").exists() {
-            "/usr/libexec/xscreensaver/glmatrix".to_string()
-        } else if std::path::Path::new("/usr/lib/xscreensaver/glmatrix").exists() {
-            "/usr/lib/xscreensaver/glmatrix".to_string()
-        } else {
-            "/opt/glmatrix-live/libexec/glmatrix".to_string()
-        };
+        let default_glmatrix = "builtin".to_string();
 
         let default_pam = if std::path::Path::new("/etc/pam.d/glmatrix-live").exists() {
             "glmatrix-live".to_string()
@@ -262,6 +245,29 @@ impl Config {
         fs::write(&tmp_path, &content)?;
         fs::rename(&tmp_path, &path)?;
         Ok(())
+    }
+
+    pub fn spawn_glmatrix(
+        &self,
+        opts: &MatrixOptions,
+        window_id: u32,
+    ) -> Result<std::process::Child, String> {
+        let target = self.general.get_glmatrix_path();
+        let args = opts.to_args(window_id);
+        if target == "builtin" {
+            let exe = std::env::current_exe()
+                .map_err(|e| format!("Gagal menemukan executable glmatrix-live: {}", e))?;
+            std::process::Command::new(&exe)
+                .arg("render")
+                .args(&args)
+                .spawn()
+                .map_err(|e| format!("Gagal menjalankan renderer bawaan ({:?}): {}", exe, e))
+        } else {
+            std::process::Command::new(&target)
+                .args(&args)
+                .spawn()
+                .map_err(|e| format!("Gagal menjalankan glmatrix di {}: {}", target, e))
+        }
     }
 }
 

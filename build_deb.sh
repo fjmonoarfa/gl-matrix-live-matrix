@@ -95,7 +95,7 @@ Section: utils
 Priority: optional
 Architecture: $ARCH
 Installed-Size: $INSTALLED_SIZE
-Depends: libc6, libpam0g, xscreensaver-gl, python3, python3-gi, gir1.2-gtk-3.0
+Depends: libc6, libpam0g, libgl1, libx11-6, python3, python3-gi, gir1.2-gtk-3.0
 Maintainer: FJ <fj@local>
 Description: Native Matrix GL Live Wallpaper and Lockscreen Manager
  Lightweight native desktop live wallpaper and lockscreen manager for X11

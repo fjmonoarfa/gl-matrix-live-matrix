@@ -100,15 +100,7 @@ def get_binary_path() -> str:
 
 
 def default_glmatrix_path() -> str:
-    for p in (
-        "/opt/glmatrix-live/libexec/glmatrix",
-        "/usr/libexec/xscreensaver/glmatrix",
-        "/usr/lib/xscreensaver/glmatrix",
-        "/usr/bin/glmatrix",
-    ):
-        if os.path.exists(p):
-            return p
-    return "/usr/libexec/xscreensaver/glmatrix"
+    return "builtin"
 
 
 def default_pam_service() -> str:
@@ -695,9 +687,9 @@ class EmbeddedMatrixPreview(Gtk.Box):
         if xid is None:
             return
 
-        glmatrix_bin = self._get_glmatrix_bin()
-        if not os.path.exists(glmatrix_bin):
-            self.lbl_info.set_text(f"Binary glmatrix tidak ditemukan: {glmatrix_bin}")
+        glmatrix_cmd = self._get_glmatrix_bin()
+        if not glmatrix_cmd:
+            self.lbl_info.set_text("Renderer glmatrix tidak ditemukan.")
             return
 
         cli_flags = build_glmatrix_cli_flags(self._pending_opts, include_root=False)
@@ -705,7 +697,7 @@ class EmbeddedMatrixPreview(Gtk.Box):
             return
 
         self.stop()
-        args = [glmatrix_bin, "-window-id", hex(xid)] + cli_flags
+        args = glmatrix_cmd + ["-window-id", hex(xid)] + cli_flags
         try:
             self._proc = subprocess.Popen(
                 args,
@@ -1204,13 +1196,19 @@ class ConfigPanelWindow(Gtk.Window):
         sys_grid.set_margin_end(12)
         sys_frame.add(sys_grid)
 
-        sys_grid.attach(Gtk.Label(label="Binary glmatrix:", xalign=0), 0, 0, 1, 1)
+        sys_grid.attach(Gtk.Label(label="Renderer glmatrix:", xalign=0), 0, 0, 1, 1)
         self.entry_glmatrix_path = Gtk.Entry()
         self.entry_glmatrix_path.set_hexpand(True)
+        path_btns = Gtk.Box(spacing=4)
+        btn_builtin = Gtk.Button(label="Bawaan")
+        btn_builtin.set_tooltip_text("Gunakan renderer OpenGL bawaan (tanpa xscreensaver)")
+        btn_builtin.connect("clicked", lambda _b: self.entry_glmatrix_path.set_text("builtin"))
         btn_browse = Gtk.Button(label="Pilih...")
         btn_browse.connect("clicked", self._on_browse_glmatrix)
+        path_btns.pack_start(btn_builtin, False, False, 0)
+        path_btns.pack_start(btn_browse, False, False, 0)
         sys_grid.attach(self.entry_glmatrix_path, 1, 0, 1, 1)
-        sys_grid.attach(btn_browse, 2, 0, 1, 1)
+        sys_grid.attach(path_btns, 2, 0, 1, 1)
 
         sys_grid.attach(Gtk.Label(label="PAM Service:", xalign=0), 0, 1, 1, 1)
         self.entry_pam = Gtk.Entry()
@@ -1268,11 +1266,13 @@ class ConfigPanelWindow(Gtk.Window):
         self.preview_widget.update_options(self._get_active_preview_options(), immediate=True)
         GLib.timeout_add(1200, self._poll_status)
 
-    def _get_glmatrix_bin(self) -> str:
+    def _get_glmatrix_bin(self) -> list[str]:
         p = self.entry_glmatrix_path.get_text().strip()
-        if p and os.path.exists(p):
-            return p
-        return default_glmatrix_path()
+        if not p or p.lower() == "builtin":
+            return [self._bin_path, "render"]
+        if os.path.exists(p):
+            return [p]
+        return [self._bin_path, "render"]
 
     def _get_active_preview_options(self, page_num: int | None = None) -> dict:
         if page_num is None:
@@ -1477,9 +1477,9 @@ class ConfigPanelWindow(Gtk.Window):
             self._set_feedback("Jendela preview ditutup.")
             return
 
-        glmatrix_bin = self._get_glmatrix_bin()
+        glmatrix_cmd = self._get_glmatrix_bin()
         opts = self._get_active_preview_options()
-        args = [glmatrix_bin, "--window"] + build_glmatrix_cli_flags(opts, include_root=False)
+        args = glmatrix_cmd + ["--window"] + build_glmatrix_cli_flags(opts, include_root=False)
         try:
             self._popout_proc = subprocess.Popen(args)
             self.preview_widget.btn_popout.set_label("Tutup Jendela")
